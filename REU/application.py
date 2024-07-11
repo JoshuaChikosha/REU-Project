@@ -73,7 +73,7 @@ class Application:
                 population.append(offspring1)
                 population.append(offspring2)
 
-            # Extract fitness and coverage information
+            
             fitness_coverage_pairs = [self.fitness(simulation_field, individual) for individual in population]
             current_best_fitness, current_best_coverage = max(fitness_coverage_pairs, key=lambda x: x[0])
 
