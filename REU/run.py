@@ -2,38 +2,37 @@ import numpy as np
 from application import Application
 from field import Field
 from sensor import Sensor
+import matplotlib.pyplot as plt
 
 # Parameters
 sensing_range = 10
 communication_range = 20
-num_sensors = 25
-num_targets = 5
+num_sensors = 35
 field_width = 100
 field_height = 100
 
-# Create the field
-field = Field(field_width, field_height)
+# Run a single simulation
+def run_single_simulation():
+    np.random.seed(42)  # Set seed for reproducibility
+    field = Field(field_width, field_height)
+    # Add sensors to the field
+    sensors = [Sensor((np.random.uniform(0, field_width), np.random.uniform(0, field_height)), communication_range, sensing_range) for _ in range(num_sensors)]
+    for sensor in sensors:
+        field.add_sensor(sensor)
 
-# Randomly deploy targets
-np.random.rand()  # For reproducibility, you can remove or change the seed for different random results
-field.targets = [(np.random.uniform(0, field_width), np.random.uniform(0, field_height)) for _ in range(num_targets)]
+    app = Application(required_coverage=1, k=2, sensing_range=sensing_range, communication_range=communication_range, num_sensors=num_sensors)
+    best_solution = app.run_tabu_search(field)
+    field.sensors = best_solution
+    coverage, connectivity = app.fitness(field, best_solution)
 
-# Randomly create sensors
-sensors = [Sensor((np.random.uniform(0, field_width), np.random.uniform(0, field_height)), communication_range, sensing_range) for _ in range(num_sensors)]
+    return coverage, connectivity, field
 
-# Add sensors to the field
-for sensor in sensors:
-    field.add_sensor(sensor)
+# Run the simulation and retrieve results
+coverage, connectivity, field = run_single_simulation()
 
-# Visualize initial state of the field
-print("Initial state of the field:")
-field.visualize()
+# Output results
+print(f"Coverage: {coverage * 100:.2f}%")
+print(f"Connectivity: {connectivity * 100:.2f}%")
 
-# Create the application and run the GA algorithm
-app = Application(required_coverage=1, k=2, sensing_range=sensing_range, communication_range=communication_range, num_sensors=num_sensors)
-best_solution = app.run_ga(field, generations=5000, population_size=20)  # Adjusted for testing
-
-# Visualize the final state of the field
-print("Final state of the field after GA optimization:")
-field.sensors = best_solution
+# Visualize the field with sensors and coverage areas
 field.visualize()
