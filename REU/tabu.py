@@ -23,16 +23,15 @@ class TabuSearch:
             self.sensing_range
         ) for _ in range(self.num_sensors)]
         return sensors
-
     def evaluate(self, sensors):
-        # Create grid points for the field to simulate area coverage
-        grid_points = [(x, y) for x in np.linspace(0, self.field.width, num=20)
-                       # 20 can be adjusted based on desired granularity
-                       for y in np.linspace(0, self.field.height, num=20)]
-
-        covered_points = sum(
-            1 for point in grid_points if any(sensor.is_within_coverage(point[0], point[1]) for sensor in sensors))
-        area_coverage_ratio = covered_points / len(grid_points)
+        # Calculate Coverage Ratio
+        covered_targets = 0
+        for target in self.targets:
+            covered_count = sum(1 for sensor in sensors if ((sensor.position[0] - target[0]) ** 2 + (
+                        sensor.position[1] - target[1]) ** 2) ** 0.5 <= sensor.sensing_range)
+            if covered_count >= self.k:
+                covered_targets += 1
+        coverage_ratio = covered_targets / len(self.targets)
 
         # Calculate Connectivity Ratio
         connected_pairs = 0
@@ -44,7 +43,16 @@ class TabuSearch:
                     connected_pairs += 1
         connectivity_ratio = connected_pairs / total_possible_pairs if total_possible_pairs > 0 else 0
 
-        fitness_score =  area_coverage_ratio  # Adjust weights to favor coverage more
+        # Calculate Penalty for Under-Covered Targets
+        penalty = sum(1 for target in self.targets if sum(1 for sensor in sensors if (
+                    (sensor.position[0] - target[0]) ** 2 + (
+                        sensor.position[1] - target[1]) ** 2) ** 0.5 <= sensor.sensing_range) < self.k)
+
+        # Adjust weights to favor coverage more
+
+
+        fitness_score = 0.9 * coverage_ratio + 0.1 * connectivity_ratio - 0.4 * penalty
+
 
         return fitness_score
 
