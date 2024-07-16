@@ -1,5 +1,7 @@
 import numpy as np
 from sensor import Sensor
+from tabu import TabuSearch
+
 
 class Application:
     def __init__(self, required_coverage, k, sensing_range, communication_range, num_sensors):
@@ -10,14 +12,16 @@ class Application:
         self.num_sensors = num_sensors
 
     def fitness(self, field, sensors):
-        covered_targets = 0
-        for target in field.targets:
-            if self.count_coverage(target, sensors) >= self.k:
-                covered_targets += 1
-        
-        coverage_ratio = covered_targets / len(field.targets)
-        
-        # Connectivity incentive
+        # Create a grid or random points to simulate the area
+        grid_points = [(x, y) for x in np.linspace(0, field.width, num=20)
+                       # 20 can be adjusted based on desired granularity
+                       for y in np.linspace(0, field.height, num=20)]
+
+        covered_points = sum(
+            1 for point in grid_points if any(sensor.is_within_coverage(point[0], point[1]) for sensor in sensors))
+        area_coverage_ratio = covered_points / len(grid_points)
+
+        # Connectivity remains unchanged
         connected_sensors = 0
         total_pairs = 0
         for i in range(len(sensors)):
@@ -25,28 +29,33 @@ class Application:
                 total_pairs += 1
                 if sensors[i].is_within_range(sensors[j]):
                     connected_sensors += 1
-        
         connectivity_ratio = connected_sensors / total_pairs if total_pairs > 0 else 0
-        
-        # Weighted sum of coverage and connectivity
-        fitness_score = 0.7 * coverage_ratio + 0.3 * connectivity_ratio  # Adjust weights as needed
-        return fitness_score, covered_targets
+
+        # Weighted sum of area coverage and connectivity
+        fitness_score = 1.0 * area_coverage_ratio + 0.2 * connectivity_ratio  # Adjust weights as needed
+        return fitness_score, covered_points
+
+    def run_tabu_search(self, field):
+        # Initialize TabuSearch with max_iterations set to 1000
+        ts = TabuSearch(field, self.num_sensors, self.communication_range, self.sensing_range, field.targets, self.k, max_iterations=400)
+        best_solution = ts.run()
+        return best_solution
 
 
+    # Other methods remain unchanged
 
 
 
     def total_distance_to_target(self, target, sensors):
-        return sum(((sensor.position[0] - target[0]) ** 2 + (sensor.position[1] - target[1]) ** 2) ** 0.5 for sensor in sensors)
-
-
+        return sum(((sensor.position[0] - target[0]) ** 2 + (sensor.position[1] - target[1]) ** 2) ** 0.5 for sensor in
+                   sensors)
 
     def count_coverage(self, target, sensors):
-            count = 0
-            for sensor in sensors:
-                if sensor.is_within_coverage(target[0], target[1]):
-                    count += 1
-            return count
+        count = 0
+        for sensor in sensors:
+            if sensor.is_within_coverage(target[0], target[1]):
+                count += 1
+        return count
 
     def run_ga(self, simulation_field, generations=1000, population_size=50):
         population = self.initialize_population(simulation_field, population_size)
@@ -55,15 +64,16 @@ class Application:
         print("Initial Population Fitness:")
         for i, individual in enumerate(population):
             fit, covered_targets = self.fitness(simulation_field, individual)
-            print(f"Individual {i}: Fitness = {fit:.4f}, Covered Targets = {covered_targets}, Positions = {[sensor.position for sensor in individual]}")
-        
+            print(
+                f"Individual {i}: Fitness = {fit:.4f}, Covered Targets = {covered_targets}, Positions = {[sensor.position for sensor in individual]}")
+
         for gen in range(generations):
             new_population = []
             for individual in population:
                 new_individual = self.perform_ga_operations(simulation_field, individual, population)
                 new_population.append(new_individual)
             population = self.select_best_individuals(new_population, simulation_field)
-            
+
             while len(population) < population_size:
                 indices = np.random.choice(len(population), 2, replace=False)
                 parent1, parent2 = population[indices[0]], population[indices[1]]
@@ -73,24 +83,24 @@ class Application:
                 population.append(offspring1)
                 population.append(offspring2)
 
-            
+            # Extract fitness and coverage information
             fitness_coverage_pairs = [self.fitness(simulation_field, individual) for individual in population]
             current_best_fitness, current_best_coverage = max(fitness_coverage_pairs, key=lambda x: x[0])
 
             if current_best_fitness > best_fitness:
                 best_fitness = current_best_fitness
                 best_coverage = current_best_coverage
-            
-            print(f"Generation {gen + 1}/{generations}, best fitness: {best_fitness:.4f}, best coverage: {best_coverage}/{len(simulation_field.targets)}")
+
+            print(
+                f"Generation {gen + 1}/{generations}, best fitness: {best_fitness:.4f}, best coverage: {best_coverage}/{len(simulation_field.targets)}")
             for i, (fit, covered_targets) in enumerate(fitness_coverage_pairs):
-                print(f"Individual {i}: Fitness = {fit:.4f}, Covered Targets = {covered_targets}, Positions = {[sensor.position for sensor in population[i]]}")
+                print(
+                    f"Individual {i}: Fitness = {fit:.4f}, Covered Targets = {covered_targets}, Positions = {[sensor.position for sensor in population[i]]}")
 
         # Find the best solution
         best_solution = max(population, key=lambda x: self.fitness(simulation_field, x)[0])
         simulation_field.sensors = best_solution
         return best_solution
-
-
 
     def initialize_population(self, field, population_size):
         population = []
@@ -105,7 +115,6 @@ class Application:
             population.append(individual)
         return population
 
-
     def perform_ga_operations(self, field, individual, population):
         new_individual = individual.copy()
         if np.random.rand() < 0.7:  # Crossover probability
@@ -116,11 +125,10 @@ class Application:
 
     def select_best_individuals(self, population, field):
         sorted_population = sorted(population, key=lambda x: self.fitness(field, x), reverse=True)
-        best_individuals = sorted_population[:len(population)//2]
+        best_individuals = sorted_population[:len(population) // 2]
         while len(best_individuals) < len(population):
             best_individuals.append(self.initialize_population(field, 1)[0])
         return best_individuals
-
 
     def crossover(self, parent1, parent2):
         crossover_point = len(parent1) // 2
@@ -136,7 +144,7 @@ class Application:
         for sensor in individual:
             if np.random.rand() < mutation_rate:
                 new_position = (
-                    sensor.position[0] + np.random.uniform(-10, 10), 
+                    sensor.position[0] + np.random.uniform(-10, 10),
                     sensor.position[1] + np.random.uniform(-10, 10)
                 )
                 sensor.position = (
