@@ -2,7 +2,6 @@ import numpy as np
 from sensor import Sensor
 from tabu import TabuSearch
 
-
 class Application:
     def __init__(self, required_coverage, k, sensing_range, communication_range, num_sensors):
         self.required_coverage = required_coverage
@@ -10,30 +9,6 @@ class Application:
         self.sensing_range = sensing_range
         self.communication_range = communication_range
         self.num_sensors = num_sensors
-
-    def fitness(self, field, sensors):
-        # Create a grid or random points to simulate the area
-        grid_points = [(x, y) for x in np.linspace(0, field.width, num=20)
-                       # 20 can be adjusted based on desired granularity
-                       for y in np.linspace(0, field.height, num=20)]
-
-        covered_points = sum(
-            1 for point in grid_points if any(sensor.is_within_coverage(point[0], point[1]) for sensor in sensors))
-        area_coverage_ratio = covered_points / len(grid_points)
-
-        # Connectivity remains unchanged
-        connected_sensors = 0
-        total_pairs = 0
-        for i in range(len(sensors)):
-            for j in range(i + 1, len(sensors)):
-                total_pairs += 1
-                if sensors[i].is_within_range(sensors[j]):
-                    connected_sensors += 1
-        connectivity_ratio = connected_sensors / total_pairs if total_pairs > 0 else 0
-
-        # Weighted sum of area coverage and connectivity
-        fitness_score = 1.0 * area_coverage_ratio + 0.2 * connectivity_ratio  # Adjust weights as needed
-        return fitness_score, covered_points
 
     def run_tabu_search(self, field):
         # Initialize TabuSearch with max_iterations set to 1000
@@ -44,7 +19,28 @@ class Application:
 
     # Other methods remain unchanged
 
+    def fitness(self, field, sensors):
+        covered_targets = 0
+        for target in field.targets:
+            if self.count_coverage(target, sensors) >= self.k:
+                covered_targets += 1
 
+        coverage_ratio = covered_targets / len(field.targets)
+
+        # Connectivity incentive
+        connected_sensors = 0
+        total_pairs = 0
+        for i in range(len(sensors)):
+            for j in range(i + 1, len(sensors)):
+                total_pairs += 1
+                if sensors[i].is_within_range(sensors[j]):
+                    connected_sensors += 1
+
+        connectivity_ratio = connected_sensors / total_pairs if total_pairs > 0 else 0
+
+        # Weighted sum of coverage and connectivity
+        fitness_score = 1.0 * coverage_ratio + 0.2 * connectivity_ratio  # Adjust weights as needed
+        return fitness_score, covered_targets
 
     def total_distance_to_target(self, target, sensors):
         return sum(((sensor.position[0] - target[0]) ** 2 + (sensor.position[1] - target[1]) ** 2) ** 0.5 for sensor in
