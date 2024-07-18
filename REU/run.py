@@ -1,59 +1,55 @@
-import numpy as np
-from application import Application
-from field import Field
-from sensor import Sensor
+import matplotlib
+
+matplotlib.use('TkAgg')  # Set the backend before importing pyplot
 import matplotlib.pyplot as plt
-
-# Parameters
-sensing_range = 10
-communication_range = 20
-num_sensors = 25
-num_targets = 5
-field_width = 100
-field_height = 100
-num_simulations = 100  # Number of bootstrap simulations
+import matplotlib.patches as patches
 
 
-# Function to run multiple simulations
-def run_simulations():
-    results = []
-    for sim in range(num_simulations):
-        np.random.seed(sim)  # Set seed for reproducibility
-        field = Field(field_width, field_height)
-        field.targets = [(np.random.uniform(0, field_width), np.random.uniform(0, field_height)) for _ in
-                         range(num_targets)]
-        sensors = [Sensor((np.random.uniform(0, field_width), np.random.uniform(0, field_height)), communication_range,
-                          sensing_range) for _ in range(num_sensors)]
-        for sensor in sensors:
-            field.add_sensor(sensor)
+class Field:
+    def __init__(self, width, height):
+        self.width = width
+        self.height = height
+        self.sensors = []
+        self.obstacles = []
+        self.targets = []
 
-        app = Application(required_coverage=1, k=2, sensing_range=sensing_range,
-                          communication_range=communication_range, num_sensors=num_sensors)
-        best_solution = app.run_tabu_search(field)
-        field.sensors = best_solution
-        coverage, connectivity = app.fitness(field, best_solution)
-        results.append((coverage, connectivity))
+    def add_sensor(self, sensor):
+        self.sensors.append(sensor)
 
-    return results
+    def add_obstacle(self, obstacle):
+        self.obstacles.append(obstacle)
 
+    def add_target(self, target):
+        self.targets.append(target)
 
-# Run simulations
-simulation_results = run_simulations()
+    def visualize(self):
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, self.width)
+        ax.set_ylim(0, self.height)
 
-# Plotting results
-coverages, connectivities = zip(*simulation_results)
-plt.figure(figsize=(10, 5))
-plt.subplot(1, 2, 1)
-plt.hist(coverages, bins=10, color='blue', alpha=0.7)
-plt.title('Coverage Distribution')
-plt.xlabel('Coverage')
-plt.ylabel('Frequency')
+        for sensor in self.sensors:
+            sensor_circle = patches.Circle(sensor.position, sensor.sensing_range, fill=False, edgecolor='blue',
+                                           label='Sensing Range')
+            ax.add_patch(sensor_circle)
+            comm_circle = patches.Circle(sensor.position, sensor.communication_range, fill=False, edgecolor='red',
+                                         linestyle='--', label='Communication Range')
+            ax.add_patch(comm_circle)
+            ax.plot(*sensor.position, 'bo')  # Sensor position
 
-plt.subplot(1, 2, 2)
-plt.hist(connectivities, bins=10, color='green', alpha=0.7)
-plt.title('Connectivity Distribution')
-plt.xlabel('Connectivity')
-plt.ylabel('Frequency')
+        for obstacle in self.obstacles:
+            rect = patches.Rectangle(obstacle.position, obstacle.size, obstacle.size, linewidth=1, edgecolor='black',
+                                     facecolor='gray')
+            ax.add_patch(rect)
 
-plt.tight_layout()
-plt.show()
+        for target in self.targets:
+            ax.plot(*target, 'rx')  # Target position
+
+        handles, labels = ax.get_legend_handles_labels()
+        by_label = dict(zip(labels, handles))
+        ax.legend(by_label.values(), by_label.keys())
+
+        plt.xlabel('X Position')
+        plt.ylabel('Y Position')
+        plt.title('Wireless Sensor Network Visualization')
+        plt.grid(True)
+        plt.show()
