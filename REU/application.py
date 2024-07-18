@@ -12,7 +12,7 @@ class Application:
 
     def run_tabu_search(self, field):
         # Initialize TabuSearch with max_iterations set to 1000
-        ts = TabuSearch(field, self.num_sensors, self.communication_range, self.sensing_range, field.targets, self.k, max_iterations=400)
+        ts = TabuSearch(field, self.num_sensors, self.communication_range, self.sensing_range, field.targets, self.k, max_iterations=5000)
         best_solution = ts.run()
         return best_solution
 
@@ -136,12 +136,12 @@ class Application:
         return offspring1, offspring2
 
     def mutate(self, individual, field):
-        mutation_rate = 0.5  # Increase the mutation rate
+        mutation_rate = 0.7  # Increase the mutation rate to 70%
         for sensor in individual:
             if np.random.rand() < mutation_rate:
                 new_position = (
-                    sensor.position[0] + np.random.uniform(-10, 10),
-                    sensor.position[1] + np.random.uniform(-10, 10)
+                    sensor.position[0] + np.random.uniform(-20, 20),  # Increased mutation range
+                    sensor.position[1] + np.random.uniform(-20, 20)
                 )
                 sensor.position = (
                     min(max(new_position[0], 0), field.width),
