@@ -1,55 +1,39 @@
-import matplotlib
+import numpy as np
+from application import Application
+from field import Field
+from sensor import Sensor
 
-matplotlib.use('TkAgg')  # Set the backend before importing pyplot
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+# Parameters
+sensing_range = 10
+communication_range = 20
+num_sensors = 25
+num_targets = 5
+field_width = 100
+field_height = 100
 
+# Create the field
+field = Field(field_width, field_height)
 
-class Field:
-    def __init__(self, width, height):
-        self.width = width
-        self.height = height
-        self.sensors = []
-        self.obstacles = []
-        self.targets = []
+# Randomly deploy targets
+np.random.seed()  # For reproducibility, you can remove or change the seed for different random results
+field.targets = [(np.random.uniform(0, field_width), np.random.uniform(0, field_height)) for _ in range(num_targets)]
 
-    def add_sensor(self, sensor):
-        self.sensors.append(sensor)
+# Randomly create sensors
+sensors = [Sensor((np.random.uniform(0, field_width), np.random.uniform(0, field_height)), communication_range, sensing_range) for _ in range(num_sensors)]
 
-    def add_obstacle(self, obstacle):
-        self.obstacles.append(obstacle)
+# Add sensors to the field
+for sensor in sensors:
+    field.add_sensor(sensor)
 
-    def add_target(self, target):
-        self.targets.append(target)
+# Visualize initial state of the field
+print("Initial state of the field:")
+field.visualize()
 
-    def visualize(self):
-        fig, ax = plt.subplots()
-        ax.set_xlim(0, self.width)
-        ax.set_ylim(0, self.height)
+# Create the application and run the Tabu Search algorithm
+app = Application(required_coverage=1, k=3, sensing_range=sensing_range, communication_range=communication_range, num_sensors=num_sensors)
+best_solution = app.run_tabu_search(field)
 
-        for sensor in self.sensors:
-            sensor_circle = patches.Circle(sensor.position, sensor.sensing_range, fill=False, edgecolor='blue',
-                                           label='Sensing Range')
-            ax.add_patch(sensor_circle)
-            comm_circle = patches.Circle(sensor.position, sensor.communication_range, fill=False, edgecolor='red',
-                                         linestyle='--', label='Communication Range')
-            ax.add_patch(comm_circle)
-            ax.plot(*sensor.position, 'bo')  # Sensor position
-
-        for obstacle in self.obstacles:
-            rect = patches.Rectangle(obstacle.position, obstacle.size, obstacle.size, linewidth=1, edgecolor='black',
-                                     facecolor='gray')
-            ax.add_patch(rect)
-
-        for target in self.targets:
-            ax.plot(*target, 'rx')  # Target position
-
-        handles, labels = ax.get_legend_handles_labels()
-        by_label = dict(zip(labels, handles))
-        ax.legend(by_label.values(), by_label.keys())
-
-        plt.xlabel('X Position')
-        plt.ylabel('Y Position')
-        plt.title('Wireless Sensor Network Visualization')
-        plt.grid(True)
-        plt.show()
+# Visualize the final state of the field
+print("Final state of the field after Tabu Search optimization:")
+field.sensors = best_solution
+field.visualize()
