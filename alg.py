@@ -1,7 +1,7 @@
 import numpy as np
 from sensor import Sensor
 import random
-
+ 
 class Alg:
     def __init__(self, field, num_sensors, communication_range, sensing_range, targets, k, max_iterations=100):
         self.field = field

@@ -12,7 +12,7 @@ num_targets = 5
 field_width = 100
 field_height = 100
 num_simulations = 100  # Number of bootstrap simulations
-
+ 
 # Create the field
 field = Field(field_width, field_height)
 
