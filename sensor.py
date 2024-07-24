@@ -1,3 +1,4 @@
+# sensor.py
 class Sensor:
     def __init__(self, position, communication_range, sensing_range):
         self.position = position
@@ -10,3 +11,4 @@ class Sensor:
 
     def is_within_coverage(self, x, y):
         return ((self.position[0] - x) ** 2 + (self.position[1] - y) ** 2) ** 0.5 <= self.sensing_range
+

@@ -16,9 +16,6 @@ class Field:
     def add_sensor(self, sensor):
         self.sensors.append(sensor)
 
-    def add_obstacle(self, obstacle):
-        self.obstacles.append(obstacle)
-
     def add_target(self, target):
         self.targets.append(target)
 
